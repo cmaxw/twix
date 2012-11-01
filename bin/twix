@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+require 'oauth'
+require 'twix'
+require 'twitter'
+
+Twix.init
+Twix.run(ARGV)
