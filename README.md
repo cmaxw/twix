@@ -52,13 +52,19 @@ Which Tweet do you want to execute?
 If you choose '1', it'll execute the tweet and print "Hi, welcome to
 twix, the Twitter Executor for Ruby"
 
+#Safety
+
+We want you to be able to execute a tweet without concerns about whether
+it's going to do something crazy like `rm -Rf /` (delete your entire
+hard drive. We're using [RubyCop](https://github.com/envylabs/RubyCop)
+to make sure that the tweet is restricted from taking control of your
+system through the Ruby interpreter or doing anything harmful.
+
+To turn off the safety feature, run twix with the --naked command. 
+
 ---
 
 #ToDo
-* Insert safety checks to avoid issues like running `rm -Rf /`
-* Allow the user to bypass the safety checks if they're too restrictive.
 * Set up a service that archives twixable tweets
 * Add ability to require other tweets
-
-
 

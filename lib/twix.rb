@@ -1,7 +1,12 @@
+#encoding: UTF-8
+
+require 'oauth'
 require 'twitter'
 require 'yaml'
+require 'ruby_cop'
+require 'pry'
 
-module Twix
+class Twix
   def self.init
     config_file = File.expand_path("~") + "/.twixrc"
     twix_config = YAML.load_file(config_file)
@@ -14,14 +19,37 @@ module Twix
   end
 
   def self.run(args)
+    @args = args
     handle_switches
-    usernames = args.select {|arg| arg.match(/\A@/)}
-    user = usernames.first
-    show_user_tweets(user) if user
+    if args.last.match(/\A@/)
+      show_user_tweets(args.last)
+    elsif args.last =~ /\A[0-9]+\Z/
+      tweet = Twitter.status(args.last)
+      execute_tweet(tweet)
+    end
   end
 
+  private
+
   def self.handle_switches
-    true
+    set_use_ruby_cop(!has_switch?("naked"))
+  end
+
+  def self.set_use_ruby_cop(on = true)
+    @ruby_cop = on
+  end
+
+  def self.ruby_cop?
+    @ruby_cop
+  end
+
+  def self.has_switch?(switch)
+    !!get_switch(switch)
+  end
+
+  def self.get_switch(switch)
+    dashes = switch.length == 1 ? "-" : "--"
+    @args.detect{|a| a.match(/\A#{dashes}#{switch}/) }
   end
 
   def self.show_user_tweets(user)
@@ -35,11 +63,36 @@ module Twix
     if tweet_index.match(/\A(1|)[0-9]\Z/).nil?
       puts "\n\nYour input must be between 0 and 19"
       show_user_tweets(user)
+    else
+      execute_tweet timeline[tweet_index.to_i]
     end
-    eval timeline[tweet_index.to_i].text
   end
 
   def self.display_tweet(tweet, index)
-    puts "\t#{index} - #{tweet.text}"
+    $stdout.puts "\t#{index} - #{tweet.text}"
+  end
+
+  def self.safe?(tweet)
+    !ruby_cop? || check_ruby_cop(tweet)
+  end
+
+  def self.check_ruby_cop(tweet)
+    policy = RubyCop::Policy.new
+    ast = RubyCop::NodeBuilder.build(tweet)
+    ast.accept(policy)
+  end
+
+  def self.execute_tweet(tweet)
+    text = sanitize_tweet(tweet.text)
+    if safe?(text)
+      eval(text)
+    else
+      puts "WARNING: That tweet is trying to do something dangerous!\n\t To remove the safety net, run `twix --naked #{tweet.id}`"
+    end
+  end
+
+  def self.sanitize_tweet(tweet)
+    tweet.gsub(/[”“]/, '"')
+      .gsub(/’/, "'")
   end
 end
